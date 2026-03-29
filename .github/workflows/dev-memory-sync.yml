@@ -1,0 +1,120 @@
+name: Dev Memory Auto Sync
+
+# 触发条件
+on:
+  push:
+    branches: ['master', 'main']
+    paths:
+      - 'docs/dev-memory/**'
+      - 'main.py'
+      - 'feishu_client.py'
+      - 'tencent_smartsheet_fixed.py'
+      - 'config_template.yaml'
+  workflow_dispatch:  # 手动触发
+
+jobs:
+  sync-memory:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
+
+      - name: Check if memory files changed
+        id: check-memory
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -q "docs/dev-memory/"; then
+            echo "memory_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "memory_changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update memory timestamp
+        if: steps.check-memory.outputs.memory_changed == 'true'
+        run: |
+          # 更新README中的最后更新时间
+          if [ -f "docs/dev-memory/README.md" ]; then
+            sed -i "s/last_updated: .*/last_updated: $(date -Iseconds)/" docs/dev-memory/README.md
+            git add docs/dev-memory/README.md
+          fi
+
+      - name: Auto-update daily log
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: |
+          TODAY="${{ steps.date.outputs.date }}"
+          DAILY_FILE="docs/dev-memory/daily/$TODAY.md"
+          
+          # 创建目录
+          mkdir -p docs/dev-memory/daily
+          
+          # 如果文件不存在，从模板创建
+          if [ ! -f "$DAILY_FILE" ]; then
+            if [ -f "docs/dev-memory/templates/daily-update.md" ]; then
+              cp docs/dev-memory/templates/daily-update.md "$DAILY_FILE"
+              sed -i "s/YYYY-MM-DD/$TODAY/g" "$DAILY_FILE"
+              sed -i "s/YYYY-MM-DDTHH:MM:SS+08:00/$(date -Iseconds)/g" "$DAILY_FILE"
+            else
+              echo "# $TODAY 开发日志" > "$DAILY_FILE"
+              echo "" >> "$DAILY_FILE"
+              echo "---" >> "$DAILY_FILE"
+              echo "" >> "$DAILY_FILE"
+            fi
+          fi
+          
+          # 添加提交记录
+          echo "" >> "$DAILY_FILE"
+          echo "### 🤖 自动记录 $(date +%H:%M)" >> "$DAILY_FILE"
+          echo "- **提交**: ${{ github.event.head_commit.message }}" >> "$DAILY_FILE"
+          echo "- **作者**: ${{ github.event.head_commit.author.name }}" >> "$DAILY_FILE"
+          echo "- **分支**: ${{ github.ref_name }}" >> "$DAILY_FILE"
+          
+          git add "$DAILY_FILE"
+
+      - name: Commit changes
+        run: |
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: 自动更新开发记忆 [skip ci]"
+            git push
+            echo "✅ 记忆已自动更新"
+          else
+            echo "ℹ️ 无需更新"
+          fi
+
+      - name: Notify Feishu
+        if: steps.check-memory.outputs.memory_changed == 'true' && env.FEISHU_WEBHOOK != ''
+        env:
+          FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+        run: |
+          curl -X POST "$FEISHU_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "msg_type": "interactive",
+              "card": {
+                "elements": [
+                  {
+                    "tag": "div",
+                    "text": {
+                      "content": "📚 **开发记忆已更新**\n\n项目: 投资日报系统\n分支: ${{ github.ref_name }}\n提交: ${{ github.event.head_commit.message }}",
+                      "tag": "lark_md"
+                    }
+                  }
+                ],
+                "header": {
+                  "title": {
+                    "content": "🔔 开发记忆同步通知",
+                    "tag": "plain_text"
+                  }
+                }
+              }
+            }'
