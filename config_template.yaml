@@ -1,0 +1,197 @@
+# 投资日报系统配置文件模板
+# 请复制为 config.yaml 并填写真实信息
+# ⚠️ 不要在版本控制中提交真实的配置文件！
+
+# 投资风格参数
+strategy: "value"               # 价值投资策略
+market: "A股"                  # A股市场
+broker: "你的券商"             # 券商名称
+
+# 自动化设置
+auto_trigger:
+  morning: true     # 08:00开盘前简报
+  evening: true     # 15:30收盘后详报
+
+# ── 飞书配置（主要推送渠道）───────────────────────────────
+# 1. 在 https://open.feishu.cn/app 创建应用
+# 2. 获取 App ID 和 App Secret
+# 3. 配置应用权限：消息发送、文档创建、多维表格读写
+# 4. 将机器人添加到目标群聊或配置单聊推送
+feishu:
+  enabled: true      # 是否启用飞书推送（建议开启）
+  app_id: ""         # 飞书应用 App ID
+  app_secret: ""     # 飞书应用 App Secret
+  # 推送目标配置（二选一）
+  push_open_id: ""   # 用户 open_id（单聊推送，优先）
+  chat_id: ""        # 群聊 ID（群聊推送）
+
+# ── 飞书多维表格配置 ──────────────────────────────────────
+bitable:
+  url: ""            # 多维表格 URL
+  # 示例：https://ocnvqlj4rir4.feishu.cn/base/QxhTbLTqoa0xPusz3aFc2Fuanph
+
+# ── 企业微信配置（备选推送渠道）─────────────────────────
+# 如果不使用飞书，可以配置企业微信机器人
+wecom:
+  enabled: false     # 是否启用企业微信推送
+  webhook_url: ""    # 企业微信机器人 Webhook URL
+
+# ── 腾讯文档配置（备选存储渠道）──────────────────────────
+# 如果不使用飞书文档，可以配置腾讯文档
+tencent_docs:
+  enabled: false      # 是否启用腾讯文档
+  token: ""          # 腾讯文档token
+  data_sheet_id: ""  # 智能表格ID
+
+# 智能表格配置（腾讯文档）
+smartsheet:
+  enabled: false      # 是否启用智能表格（已禁用，改用飞书多维表格）
+  # 表格ID与tencent_docs.data_sheet_id相同
+
+# AI分析配置（可选）
+ai_analysis:
+  enabled: true
+  model: "claude-opus-4-5"
+  max_tokens: 900
+  api_base: ""  # 可自定义API地址
+  api_key: ""   # API密钥
+
+# 持仓配置（示例，请根据实际情况修改）
+# 格式：name(名称), code(代码), shares(股数), cost(成本), type(类型)
+holdings:
+  # ETF持仓（13只）
+  - name: "沪深300ETF"
+    code: "510300"
+    shares: 10000
+    cost: 4.50
+    type: etf
+  - name: "科创50ETF"
+    code: "588000"
+    shares: 14000
+    cost: 1.435
+    type: etf
+  - name: "有色金属ETF"
+    code: "562800"
+    shares: 16000
+    cost: 0.731
+    type: etf
+  - name: "中概互联网ETF"
+    code: "513050"
+    shares: 12000
+    cost: 1.18
+    type: etf
+  - name: "恒生指数ETF"
+    code: "513000"
+    shares: 11500
+    cost: 0.85
+    type: etf
+
+  # 个股持仓（7只）
+  - name: "浩物股份"
+    code: "000757"
+    shares: 40000
+    cost: 4.65
+    type: stock
+  - name: "四川长虹"
+    code: "600839"
+    shares: 60000
+    cost: 4.01
+    type: stock
+  - name: "TCL科技"
+    code: "000100"
+    shares: 55000
+    cost: 4.15
+    type: stock
+  - name: "利欧股份"
+    code: "002131"
+    shares: 75000
+    cost: 2.05
+    type: stock
+  - name: "上汽集团"
+    code: "600104"
+    shares: 45000
+    cost: 14.5
+    type: stock
+
+  # 可转债持仓（1只）
+  - name: "和邦转债"
+    code: "110061"
+    shares: 10
+    cost: 102.5
+    type: bond
+
+# 代理配置（可选）
+proxy:
+  enabled: false
+  http: "http://localhost:7890"
+  https: "http://localhost:7890"
+
+# 数据源配置
+data_source:
+  primary: "tencent"       # 主要数据源
+  fallback: "eastmoney"    # 备用数据源
+  retry_count: 3
+  timeout: 10
+
+# 日志配置
+log:
+  level: "INFO"
+  file: "logs/investment_daily.log"
+  max_size_mb: 10
+  backup_count: 5
+
+# 报表配置
+report:
+  morning_title: "💰 投资日报 - 开盘前简报"
+  evening_title: "📊 投资日报 - 收盘后详报"
+  date_format: "%Y-%m-%d"
+  include_charts: false    # 是否包含图表
+
+# 定时任务配置（使用schedule库）
+schedule:
+  morning_time: "08:00"
+  evening_time: "15:30"
+  weekdays_only: true      # 仅工作日运行
+  log_schedule: true       # 日志记录调度情况
+
+# 消息模板（可自定义）
+message_templates:
+  morning_intro: "💰 早安！这是今日的投资简报，助您把握开盘先机："
+  evening_intro: "📊 收盘总结来啦！今日市场动向及明日操盘建议："
+  market_overview: "【市场概览】"
+  holdings_summary: "【持仓概览】"
+  valuation_temp: "【估值温度】"
+  ai_advice: "【AI分析建议】"
+
+# 环境变量引用（可选）
+# 建议将敏感信息存储在环境变量中
+# environment_variables:
+#   FEISHU_APP_ID: "FEISHU_APP_ID"
+#   FEISHU_APP_SECRET: "FEISHU_APP_SECRET"
+#   TENCENT_DOCS_TOKEN: "TENCENT_DOCS_TOKEN"
+
+# 版本信息和备注
+meta:
+  version: "飞书版 v1.0"
+  last_updated: "2026-03-28"
+  description: "基于飞书体系的自动化投资日报系统"
+  notes: |
+    这是一个完全自动化的投资辅助系统，包括：
+    1. 每日自动采集市场数据
+    2. 自动计算持仓盈亏
+    3. 自动生成投资日报
+    4. 飞书推送消息和文档
+    5. 飞书多维表格数据存储
+    6. AI投资建议生成
+
+# ⚠️ 部署前必读 ⚠️
+#
+# 1. 将此文件复制并重命名为 config.yaml
+# 2. 填写你的真实配置信息（飞书配置为必填项）
+# 3. 确保持仓信息准确无误
+# 4. API密钥和敏感信息避免提交到版本控制
+# 5. 首次运行前执行：pip install -r requirements.txt
+# 6. 测试运行：python main.py --morning
+# 7. 验证飞书推送、文档创建、多维表格存储等各项服务
+#
+# 更多配置说明请参考 BRIEF.md 和 DEPLOYMENT_GUIDE.md
